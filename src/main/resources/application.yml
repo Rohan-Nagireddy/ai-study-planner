@@ -1,0 +1,62 @@
+spring:
+  application:
+    name: ai-study-planner
+
+  data:
+    mongodb:
+      uri: mongodb://127.0.0.1:27017/studyplannerdb
+      database: studyplannerdb
+      auto-index-creation: true
+
+  # OAuth2 Login (Google & GitHub)
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID:MISSING_GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET:MISSING_GOOGLE_CLIENT_SECRET}
+            scope:
+              - email
+              - profile
+          github:
+            client-id: ${GITHUB_CLIENT_ID:MISSING_GITHUB_CLIENT_ID}
+            client-secret: ${GITHUB_CLIENT_SECRET:MISSING_GITHUB_CLIENT_SECRET}
+            redirect-uri: "{baseUrl}/login/oauth2/code/github"
+            scope:
+              - read:user
+              - user:email
+    user:
+      password: "disabled"
+
+server:
+  port: 8080
+
+# Application Configuration
+app:
+  # JWT
+  jwt:
+    secret: ${JWT_SECRET:dGhpc2lzYXZlcnlzZWN1cmVpbnRlcm5hbGp3dHNlY3JldGtleTIwMjYwMzIw}
+    expiration-ms: 86400000        # 24 hours
+    refresh-expiration-ms: 604800000  # 7 days
+
+  # Groq AI Integration
+  groq:
+    api-key: ${GROQ_API_KEY:your-groq-api-key-here}
+    base-url: https://api.groq.com/openai/v1
+    model: llama3-8b-8192          # fast + capable; swap for llama3-70b-8192 for better quality
+    max-tokens: 2048
+    temperature: 0.7
+    timeout-seconds: 30
+
+# Logging
+logging:
+  level:
+    com.studyplanner: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.security.oauth2: DEBUG
+    org.springframework.data.mongodb: DEBUG
+    org.mongodb.driver.connection: INFO
+    org.mongodb.driver.cluster: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

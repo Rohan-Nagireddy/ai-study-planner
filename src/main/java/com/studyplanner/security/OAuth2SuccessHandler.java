@@ -1,0 +1,54 @@
+package com.studyplanner.security;
+
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
+import org.springframework.stereotype.Component;
+import org.springframework.web.util.UriComponentsBuilder;
+
+import java.io.IOException;
+
+/**
+ * Custom success handler for OAuth2 login.
+ * 
+ * <p>After successful authentication with Google/GitHub:</p>
+ * <ol>
+ *   <li>Extract user info (email, name).</li>
+ *   <li>Sync with MongoDB (create if missing).</li>
+ *   <li>Generate a standard JWT token.</li>
+ *   <li>Redirect back to the React frontend with the token as a URL parameter.</li>
+ * </ol>
+ */
+@Slf4j
+@Component
+@RequiredArgsConstructor
+public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
+
+    private final JwtUtil        jwtUtil;
+
+    @Override
+    public void onAuthenticationSuccess(
+            HttpServletRequest  request,
+            HttpServletResponse response,
+            Authentication      authentication
+    ) throws IOException, ServletException {
+
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        log.info("OAuth2 login successful for user: {}", userDetails.getUsername());
+
+        // 1. Generate JWT
+        String token = jwtUtil.generateToken(userDetails);
+
+        // 3. Redirect to Frontend
+        String targetUrl = UriComponentsBuilder.fromUriString("http://localhost:5173/oauth-success")
+                .queryParam("token", token)
+                .build().toUriString();
+
+        getRedirectStrategy().sendRedirect(request, response, targetUrl);
+    }
+}
