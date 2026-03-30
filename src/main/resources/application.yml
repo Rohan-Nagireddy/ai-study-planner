@@ -4,9 +4,8 @@ spring:
 
   data:
     mongodb:
-      uri: mongodb://127.0.0.1:27017/studyplannerdb
-      database: studyplannerdb
-      auto-index-creation: true
+      uri: ${MONGODB_URI}
+      auto-index-creation: false
 
   # OAuth2 Login (Google & GitHub)
   security:
