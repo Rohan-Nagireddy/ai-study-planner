@@ -1,0 +1,23 @@
+# Build artifacts
+target/
+*.jar
+
+# Frontend (not needed in backend Docker image)
+frontend/node_modules/
+frontend/dist/
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+
+# Logs
+*.log
+*.txt
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
