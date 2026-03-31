@@ -1,37 +1,28 @@
 import axios from 'axios';
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+// ── Base URL (set VITE_API_URL in .env.local or Vercel/Netlify dashboard) ────
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
-/**
- * Axios instance pre-configured with the backend base URL.
- * - Attaches JWT Bearer token on every request via request interceptor.
- * - Handles 401 Unauthorized globally — clears storage and redirects to /login.
- */
-const api = axios.create({
-  baseURL: BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+const client = axios.create({
+  baseURL: API_URL,
+  headers: { 'Content-Type': 'application/json' },
 });
 
 // ── Request interceptor: attach JWT ─────────────────────────────────────────
-api.interceptors.request.use(
+client.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+    if (token) config.headers.Authorization = `Bearer ${token}`;
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// ── Response interceptor: global error handling ──────────────────────────────
-api.interceptors.response.use(
+// ── Response interceptor: global 401/403 handling ───────────────────────────
+client.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401 || error.response?.status === 403) {
-      // Token expired, invalid, or permissions missing — force re-login
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       if (window.location.pathname !== '/login') {
@@ -42,11 +33,7 @@ api.interceptors.response.use(
   }
 );
 
-/**
- * Extracts a human-readable error message from an Axios error.
- * Checks the backend's { message } field first, then falls back to
- * the HTTP status text or a generic message.
- */
+// ── Helper: extract readable error message ───────────────────────────────────
 export function getErrorMessage(error, fallback = 'Something went wrong') {
   return (
     error.response?.data?.message ||
@@ -56,4 +43,87 @@ export function getErrorMessage(error, fallback = 'Something went wrong') {
   );
 }
 
-export default api;
+// ── Auth ─────────────────────────────────────────────────────────────────────
+
+/**
+ * Login with email + password.
+ * Returns { token, user } on success.
+ */
+export async function login(email, password) {
+  try {
+    const { data } = await client.post('/auth/login', { email, password });
+    if (data.token) {
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user ?? { email }));
+    }
+    return data;
+  } catch (error) {
+    throw new Error(getErrorMessage(error, 'Login failed'));
+  }
+}
+
+/**
+ * Register a new user.
+ * Returns the created user object on success.
+ */
+export async function register(name, email, password) {
+  try {
+    const { data } = await client.post('/auth/register', { name, email, password });
+    return data;
+  } catch (error) {
+    throw new Error(getErrorMessage(error, 'Registration failed'));
+  }
+}
+
+// ── Tasks / Study Plans ──────────────────────────────────────────────────────
+
+/**
+ * Fetch all study plans for the logged-in user.
+ * Returns an array of plan objects.
+ */
+export async function getTasks() {
+  try {
+    const { data } = await client.get('/study-plans');
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
+    throw new Error(getErrorMessage(error, 'Failed to fetch tasks'));
+  }
+}
+
+/**
+ * Create a new study plan / task.
+ * @param {{ title, subject, description, priority, targetDate, estimatedHours }} task
+ */
+export async function createTask(task) {
+  try {
+    const { data } = await client.post('/study-plans', task);
+    return data;
+  } catch (error) {
+    throw new Error(getErrorMessage(error, 'Failed to create task'));
+  }
+}
+
+/**
+ * Update an existing study plan by ID.
+ */
+export async function updateTask(id, updates) {
+  try {
+    const { data } = await client.put(`/study-plans/${id}`, updates);
+    return data;
+  } catch (error) {
+    throw new Error(getErrorMessage(error, 'Failed to update task'));
+  }
+}
+
+/**
+ * Delete a study plan by ID.
+ */
+export async function deleteTask(id) {
+  try {
+    await client.delete(`/study-plans/${id}`);
+  } catch (error) {
+    throw new Error(getErrorMessage(error, 'Failed to delete task'));
+  }
+}
+
+export default client;

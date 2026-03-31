@@ -1,38 +1,27 @@
 import React from 'react'
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
-import { Layout } from './components/Layout'
-import { Dashboard } from './pages/Dashboard'
-import { Login } from './pages/Login'
-import { Register } from './pages/Register'
-import { FocusMode } from './pages/FocusMode'
-import { StudyPlanner } from './pages/StudyPlanner'
-import { Analytics } from './pages/Analytics'
-import { AdminDashboard } from './pages/AdminDashboard'
-import { Profile } from './pages/Profile'
-import { Achievements } from './pages/Achievements'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { ProtectedRoute } from './components/ProtectedRoute'
-import { OAuthSuccess } from './pages/OAuthSuccess'
+import { Layout } from './components/Layout'
+import { Login } from './pages/Login'
+import { Register } from './pages/Register'
+import { Dashboard } from './pages/Dashboard'
+import { Planner } from './pages/Planner'
 
 function App() {
   return (
     <AuthProvider>
       <Router>
         <Routes>
-          <Route path="/login" element={<Login />} />
+          <Route path="/login"    element={<Login />} />
           <Route path="/register" element={<Register />} />
-          <Route path="/oauth-success" element={<OAuthSuccess />} />
           <Route path="/*" element={
             <ProtectedRoute>
               <Layout>
                 <Routes>
-                  <Route path="/" element={<Dashboard />} />
-                  <Route path="/planner" element={<StudyPlanner />} />
-                  <Route path="/focus" element={<FocusMode />} />
-                  <Route path="/analytics" element={<Analytics />} />
-                  <Route path="/achievements" element={<Achievements />} />
-                  <Route path="/admin" element={<AdminDashboard />} />
-                  <Route path="/profile" element={<Profile />} />
+                  <Route path="/"        element={<Dashboard />} />
+                  <Route path="/planner" element={<Planner />} />
+                  <Route path="*"        element={<Navigate to="/" replace />} />
                 </Routes>
               </Layout>
             </ProtectedRoute>

@@ -1,290 +1,157 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Target, 
-  TrendingUp, 
-  Calendar as CalendarIcon,
-  CheckCircle2,
-  MoreVertical,
-  Flame,
-  BrainCircuit,
-  Sparkles,
-  Clock,
-  Zap,
-  Clock as ClockIcon
-} from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler
-} from 'chart.js';
-import { Line } from 'react-chartjs-2';
-import { analyticsService, taskService, aiService } from '../services/dataService';
-import { useAuth } from '../context/AuthContext';
-import { Loader2 } from 'lucide-react';
-import { cn } from '../lib/utils';
+import React, { useState, useEffect } from 'react'
+import { useAuth } from '../context/AuthContext'
+import api from '../services/api'
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler
-);
+const STATS = [
+  { key: 'tasks',    label: 'Tasks Today',    icon: '✅', color: '#8b5cf6' },
+  { key: 'streak',   label: 'Day Streak',     icon: '🔥', color: '#f59e0b' },
+  { key: 'minutes',  label: 'Study Minutes',  icon: '⏱️', color: '#06b6d4' },
+  { key: 'score',    label: 'Focus Score',    icon: '⚡', color: '#10b981' },
+]
 
 export function Dashboard() {
-  const { user } = useAuth();
-  const [stats, setStats] = useState([]);
-  const [dailyData, setDailyData] = useState(null);
-  const [weeklyData, setWeeklyData] = useState(null);
-  const [streakData, setStreakData] = useState(null);
-  const [tasks, setTasks] = useState([]);
-  const [latestPlan, setLatestPlan] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { user } = useAuth()
+  const [stats, setStats]   = useState({ tasks: 0, streak: 0, minutes: 0, score: 0 })
+  const [tasks, setTasks]   = useState([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const fetchData = async () => {
+    async function load() {
       try {
-        const [dailyRes, weeklyRes, streakRes, tasksRes, aiRes] = await Promise.all([
-          analyticsService.getDaily(),
-          analyticsService.getWeekly(),
-          analyticsService.getStreak(),
-          taskService.getTasks(),
-          aiService.getPlans()
-        ]);
-
-        const daily = dailyRes.data.data;
-        const weekly = weeklyRes.data.data;
-        const streak = streakRes.data.data;
-        const taskList = tasksRes.data.data;
-        const plans = aiRes.data.data;
-
-        setDailyData(daily);
-        setWeeklyData(weekly);
-        setStreakData(streak);
-        setTasks(taskList.filter(t => !t.completed).slice(0, 4));
-        if (plans && plans.length > 0) {
-          setLatestPlan(plans[0]);
-        }
-
-        setStats([
-          { label: 'Today Study', value: `${daily.totalStudyHours}h`, icon: Clock, color: 'text-blue-500', bg: 'bg-blue-500/10', trend: 'Today' },
-          { label: 'Focus Score', value: `${daily.averageFocusScore}/100`, icon: Zap, color: 'text-yellow-500', bg: 'bg-yellow-500/10', trend: 'Avg' },
-          { label: 'Study Streak', value: `${streak.currentStreak} Days`, icon: Flame, color: 'text-orange-500', bg: 'bg-orange-500/10', trend: `Best: ${streak.longestStreak}` },
-          { label: 'Tasks Done', value: `${daily.tasksCompleted}/${daily.totalTasks}`, icon: CheckCircle2, color: 'text-green-500', bg: 'bg-green-500/10', trend: `${daily.taskCompletionRate}%` },
-        ]);
-      } catch (error) {
-        console.error('Failed to fetch dashboard data', error);
-      } finally {
-        setLoading(false);
+        const [plansRes] = await Promise.allSettled([
+          api.get('/study-plans'),
+        ])
+        const plans = plansRes.status === 'fulfilled' ? plansRes.value.data : []
+        const arr   = Array.isArray(plans) ? plans : []
+        setTasks(arr.slice(0, 5))
+        setStats(s => ({ ...s, tasks: arr.length }))
+      } catch { /* ignore */ } finally {
+        setLoading(false)
       }
-    };
+    }
+    load()
+  }, [])
 
-    fetchData();
-  }, []);
-
-  const chartData = {
-    labels: weeklyData?.dailyBreakdown.map(d => d.date.split('-').slice(1).join('/')) || [],
-    datasets: [
-      {
-        fill: true,
-        label: 'Hours Studied',
-        data: weeklyData?.dailyBreakdown.map(d => d.totalStudyHours) || [],
-        borderColor: 'rgb(59, 130, 246)',
-        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-        tension: 0.4,
-      },
-    ],
-  };
-
-  const chartOptions = {
-    responsive: true,
-    plugins: {
-      legend: { display: false },
-    },
-    scales: {
-      y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } },
-      x: { grid: { display: false } },
-    },
-  };
-
-  if (loading) {
-    return (
-      <div className="flex h-[60vh] items-center justify-center">
-        <Loader2 className="w-10 h-10 text-primary animate-spin" />
-      </div>
-    );
+  const greeting = () => {
+    const h = new Date().getHours()
+    if (h < 12) return 'Good morning'
+    if (h < 17) return 'Good afternoon'
+    return 'Good evening'
   }
 
   return (
-    <div className="space-y-8 pb-10">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">Good morning, {user?.name.split(' ')[0]}! 👋</h1>
-          <p className="text-muted-foreground mt-1">Ready to smash your study goals today?</p>
-        </div>
-        <div className="flex gap-3">
-          <Link to="/planner" className="px-4 py-2 rounded-xl bg-card border border-border font-medium hover:bg-secondary transition-colors inline-flex items-center gap-2">
-            <CalendarIcon size={18} />
-            Planner
-          </Link>
-          <Link to="/focus" className="px-6 py-2 rounded-xl bg-primary text-primary-foreground font-semibold hover:opacity-90 transition-opacity shadow-lg shadow-primary/20">
-            Start Focus Session
-          </Link>
-        </div>
-      </header>
+    <div className="page" style={{ maxWidth: 1100 }}>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, i) => (
-          <motion.div
-            key={stat.label}
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: i * 0.1 }}
-            className="p-6 bg-card border border-border rounded-2xl shadow-sm hover:shadow-md transition-shadow group"
-          >
-            <div className="flex justify-between items-start mb-4">
-              <div className={`${stat.bg} ${stat.color} p-3 rounded-xl`}>
-                <stat.icon size={24} />
+      {/* Header */}
+      <div style={{ marginBottom: 32 }}>
+        <h1 style={{ fontSize: '1.8rem', fontWeight: 800, marginBottom: 6 }}>
+          {greeting()}, {user?.name || 'Student'} 👋
+        </h1>
+        <p style={{ color: 'var(--text-secondary)' }}>
+          {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+        </p>
+      </div>
+
+      {/* Stat Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 32 }}>
+        {STATS.map(({ key, label, icon, color }) => (
+          <div key={key} className="card" style={{ padding: '20px 24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: 500, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</p>
+                <p style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1 }}>{stats[key]}</p>
               </div>
-              <button className="text-muted-foreground hover:text-foreground">
-                <MoreVertical size={16} />
-              </button>
+              <div style={{
+                width: 44, height: 44, borderRadius: 12, flexShrink: 0,
+                background: `${color}22`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '1.3rem',
+              }}>{icon}</div>
             </div>
-            <div>
-              <p className="text-muted-foreground text-sm font-medium">{stat.label}</p>
-              <h3 className="text-2xl font-bold mt-1 tracking-tight">{stat.value}</h3>
-              <p className="text-xs text-green-500 font-semibold mt-2 inline-flex items-center gap-1">
-                <TrendingUp size={12} /> {stat.trend}
-              </p>
+            <div style={{ marginTop: 16, height: 3, borderRadius: 99, background: 'var(--border)', overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${Math.min(stats[key] * 10, 100)}%`, background: `linear-gradient(90deg, ${color}, ${color}aa)`, borderRadius: 99, transition: 'width 1s ease' }} />
             </div>
-          </motion.div>
+          </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Weekly Productivity Chart */}
-        <div className="lg:col-span-2 p-8 bg-card border border-border rounded-3xl">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-xl font-bold">Weekly Performance</h2>
-            <div className="px-3 py-1 bg-secondary rounded-lg text-sm font-medium">Last 7 days</div>
-          </div>
-          <div className="h-[300px]">
-            <Line data={chartData} options={chartOptions} />
-          </div>
-        </div>
+      {/* Recent Tasks + Quick Actions */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 20 }}>
 
-        {/* AI Recommendations Panel */}
-        <div className="bg-gradient-to-br from-primary/10 to-blue-500/10 border border-primary/20 p-8 rounded-3xl space-y-6">
-          <h2 className="text-xl font-bold flex items-center gap-2">
-            <BrainCircuit className="text-primary" /> AI Recommendations
-          </h2>
-          <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-            {latestPlan ? (
-              <>
-                <div className="p-4 bg-white/50 dark:bg-black/20 rounded-2xl border border-white/20">
-                  <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase mb-2">
-                    <Target size={14} /> Priority Topics
-                  </div>
-                  <ul className="space-y-2">
-                    {latestPlan.priorityTopics.slice(0, 3).map((topic, i) => (
-                      <li key={i} className="text-sm font-medium flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
-                        {topic}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <div className="p-4 bg-white/50 dark:bg-black/20 rounded-2xl border border-white/20">
-                  <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase mb-2">
-                    <Sparkles size={14} /> Motivation & Tips
-                  </div>
-                  <p className="text-sm font-medium italic">"{latestPlan.motivationTips[0]}"</p>
-                </div>
-              </>
-            ) : (
-              <div className="p-8 text-center bg-white/30 rounded-2xl border border-dashed border-primary/30">
-                <Sparkles size={32} className="mx-auto text-primary/40 mb-3" />
-                <p className="text-sm text-muted-foreground">No AI plan found. Go to the planner to optimize your schedule!</p>
-              </div>
-            )}
+        {/* Recent Plans */}
+        <div className="card" style={{ padding: 24 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            <h2 style={{ fontSize: '1.05rem', fontWeight: 700 }}>Recent Study Plans</h2>
+            <span className="badge badge-purple">{tasks.length} plans</span>
           </div>
-          <Link to="/planner" className="w-full py-3 bg-primary text-white rounded-2xl font-bold hover:opacity-90 transition-opacity flex items-center justify-center gap-2 block text-center">
-            {latestPlan ? 'Update Study Plan' : 'Generate First Plan'}
-          </Link>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Heatmap Section */}
-        <div className="lg:col-span-2 p-8 bg-card border border-border rounded-3xl">
-          <h2 className="text-xl font-bold mb-6">Study Heatmap</h2>
-          <div className="flex flex-wrap gap-2">
-            {[...Array(28)].map((_, i) => (
-              <div 
-                key={i} 
-                className={cn(
-                  "w-10 h-10 rounded-lg transition-transform hover:scale-110 cursor-pointer",
-                  i % 7 === 0 ? "bg-primary/20" : 
-                  i % 5 === 0 ? "bg-primary/40" : 
-                  i % 3 === 0 ? "bg-primary/60" : 
-                  i % 2 === 0 ? "bg-primary/80" : "bg-primary"
-                )} 
-                title={`${i+1} days ago`}
-              />
-            ))}
-          </div>
-          <div className="flex items-center gap-4 mt-6 text-xs text-muted-foreground">
-            <span>Less</span>
-            <div className="flex gap-1">
-              <div className="w-3 h-3 rounded bg-primary/20" />
-              <div className="w-3 h-3 rounded bg-primary/40" />
-              <div className="w-3 h-3 rounded bg-primary/60" />
-              <div className="w-3 h-3 rounded bg-primary/80" />
-              <div className="w-3 h-3 rounded bg-primary" />
+          {loading ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {[1,2,3].map(i => (
+                <div key={i} style={{ height: 52, background: 'var(--bg-card-hover)', borderRadius: 8, animation: 'pulse 1.5s ease infinite' }} />
+              ))}
             </div>
-            <span>More</span>
-          </div>
+          ) : tasks.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-muted)' }}>
+              <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>📭</div>
+              <p>No study plans yet.</p>
+              <p style={{ fontSize: '0.85rem', marginTop: 4 }}>Go to Planner to create one!</p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {tasks.map((t, i) => (
+                <div key={t.id || i} style={{
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '12px 14px', borderRadius: 10,
+                  background: 'var(--bg-card-hover)', border: '1px solid var(--border)',
+                }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)', flexShrink: 0 }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontWeight: 500, fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.title || t.subject || 'Study Session'}</p>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: 2 }}>{t.status || 'In Progress'}</p>
+                  </div>
+                  <span className="badge badge-green" style={{ fontSize: '0.7rem' }}>Active</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Up Next Tasks */}
-        <div className="p-8 bg-card border border-border rounded-3xl">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold">Priority Tasks</h2>
-            <Link to="/planner" className="text-primary text-sm font-medium hover:underline">View All</Link>
+        {/* Quick Actions */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div className="card" style={{ padding: 24 }}>
+            <h2 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: 16 }}>Quick Actions</h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {[
+                { label: 'New Study Plan', icon: '📋', href: '/planner', color: 'var(--accent)' },
+                { label: 'Start Focus Session', icon: '⏱️', href: '/planner', color: '#06b6d4' },
+                { label: 'View Progress', icon: '📈', href: '/', color: '#10b981' },
+              ].map(({ label, icon, href, color }) => (
+                <a key={label} href={href} style={{
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '12px 14px', borderRadius: 10, textDecoration: 'none',
+                  background: `${color}11`, border: `1px solid ${color}33`,
+                  color: 'var(--text-primary)', fontWeight: 500, fontSize: '0.9rem',
+                  transition: 'all var(--transition)',
+                }}
+                  onMouseEnter={e => { e.currentTarget.style.background = `${color}22`; e.currentTarget.style.borderColor = color }}
+                  onMouseLeave={e => { e.currentTarget.style.background = `${color}11`; e.currentTarget.style.borderColor = `${color}33` }}
+                >
+                  <span style={{ fontSize: '1.1rem' }}>{icon}</span>
+                  {label}
+                </a>
+              ))}
+            </div>
           </div>
-          <div className="space-y-4">
-            {tasks.length > 0 ? tasks.map((task) => (
-                <div key={task.id} className="flex items-center gap-4 p-4 bg-secondary/50 rounded-2xl hover:bg-secondary transition-colors cursor-pointer group">
-                  <div className="w-5 h-5 rounded-full border-2 border-primary group-hover:bg-primary/10 transition-colors" />
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold text-sm truncate">{task.description || task.subject}</h4>
-                    <p className="text-xs text-muted-foreground">{task.subject}</p>
-                  </div>
-                  <div className={cn(
-                    "px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider",
-                    task.difficulty >= 3 ? "bg-red-500/10 text-red-600" : "bg-yellow-500/10 text-yellow-600"
-                  )}>{task.difficulty >= 3 ? 'HIGH' : 'MED'}</div>
-                </div>
-              )) : (
-                <div className="text-center py-10">
-                  <p className="text-muted-foreground text-sm">No pending tasks!</p>
-                </div>
-              )}
+
+          {/* Tip Card */}
+          <div className="card" style={{ padding: 24, borderColor: 'rgba(139,92,246,0.3)', background: 'rgba(139,92,246,0.06)' }}>
+            <p style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--accent-light)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>💡 Study Tip</p>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', lineHeight: 1.6 }}>
+              Use the Pomodoro technique: 25 minutes of focused study followed by a 5-minute break to maximize retention.
+            </p>
           </div>
         </div>
       </div>
     </div>
-  );
+  )
 }

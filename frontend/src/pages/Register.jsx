@@ -1,134 +1,91 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Mail, Lock, User, UserPlus, Loader2, AlertCircle } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import React, { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 
 export function Register() {
-  const [name, setName]             = useState('');
-  const [email, setEmail]           = useState('');
-  const [password, setPassword]     = useState('');
-  const [error, setError]           = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { register } = useAuth()
+  const navigate     = useNavigate()
+  const [form, setForm]     = useState({ name: '', email: '', password: '', confirm: '' })
+  const [error, setError]   = useState('')
+  const [loading, setLoading] = useState(false)
 
-  const { register } = useAuth();
-  const navigate     = useNavigate();
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters.');
-      return;
+  async function handleSubmit(e) {
+    e.preventDefault()
+    setError('')
+    if (form.password !== form.confirm) { setError('Passwords do not match'); return }
+    if (form.password.length < 6)       { setError('Password must be at least 6 characters'); return }
+    setLoading(true)
+    try {
+      await register(form.name, form.email, form.password)
+      navigate('/login')
+    } catch (err) {
+      setError(err.response?.data?.message || 'Registration failed. Try again.')
+    } finally {
+      setLoading(false)
     }
+  }
 
-    setIsSubmitting(true);
-    const result = await register(name, email, password);
-
-    if (result.success) {
-      navigate('/', { replace: true });
-    } else {
-      setError(result.message);
-    }
-    setIsSubmitting(false);
-  };
+  const update = key => e => setForm(f => ({ ...f, [key]: e.target.value }))
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.3 }}
-        className="w-full max-w-md bg-card border border-border rounded-3xl p-10 shadow-xl"
-      >
-        {/* Header */}
-        <div className="text-center mb-10">
-          <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center text-primary-foreground text-3xl font-bold mx-auto mb-4">
-            A
-          </div>
-          <h1 className="text-3xl font-bold">Create Account</h1>
-          <p className="text-muted-foreground mt-2">Start your journey to academic excellence</p>
+    <div style={{
+      minHeight: '100vh', display: 'flex', alignItems: 'center',
+      justifyContent: 'center', background: 'var(--bg-primary)', padding: 20,
+    }}>
+      <div style={{ position: 'fixed', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+        <div style={{ position: 'absolute', top: '-10%', right: '-10%', width: 500, height: 500, borderRadius: '50%', background: 'radial-gradient(circle, rgba(139,92,246,0.12), transparent 70%)' }} />
+        <div style={{ position: 'absolute', bottom: '-15%', left: '-5%', width: 600, height: 600, borderRadius: '50%', background: 'radial-gradient(circle, rgba(6,182,212,0.08), transparent 70%)' }} />
+      </div>
+
+      <div className="card animate-in" style={{ width: '100%', maxWidth: 440, padding: 40, position: 'relative' }}>
+        <div style={{ textAlign: 'center', marginBottom: 32 }}>
+          <div style={{
+            width: 56, height: 56, borderRadius: 16, margin: '0 auto 16px',
+            background: 'linear-gradient(135deg, #06b6d4, var(--accent))',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '1.6rem', boxShadow: '0 8px 32px rgba(6,182,212,0.25)',
+          }}>🚀</div>
+          <h1 style={{ fontSize: '1.6rem', fontWeight: 800, marginBottom: 6 }}>Create account</h1>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Start your AI-powered study journey</p>
         </div>
 
-        {/* Error Banner */}
         {error && (
-          <div className="mb-6 p-4 bg-destructive/10 border border-destructive/30 rounded-2xl flex items-start gap-3 text-destructive text-sm font-medium">
-            <AlertCircle size={18} className="mt-0.5 shrink-0" />
-            <span>{error}</span>
-          </div>
+          <div style={{
+            background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
+            borderRadius: 8, padding: '10px 14px', marginBottom: 20,
+            color: '#f87171', fontSize: '0.875rem',
+          }}>{error}</div>
         )}
 
-        {/* Form */}
-        <form className="space-y-5" onSubmit={handleSubmit}>
-          {/* Full Name */}
-          <div className="space-y-2">
-            <label className="text-sm font-semibold ml-1">Full Name</label>
-            <div className="relative">
-              <User className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
-              <input
-                type="text"
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Rohan Sharma"
-                className="w-full bg-secondary border-none rounded-2xl py-3.5 pl-12 pr-4 focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-              />
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div className="form-group">
+            <label className="form-label">Full name</label>
+            <input className="form-input" type="text" placeholder="John Doe" value={form.name} onChange={update('name')} required />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Email address</label>
+            <input className="form-input" type="email" placeholder="you@example.com" value={form.email} onChange={update('email')} required />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div className="form-group">
+              <label className="form-label">Password</label>
+              <input className="form-input" type="password" placeholder="••••••••" value={form.password} onChange={update('password')} required />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Confirm</label>
+              <input className="form-input" type="password" placeholder="••••••••" value={form.confirm} onChange={update('confirm')} required />
             </div>
           </div>
-
-          {/* Email */}
-          <div className="space-y-2">
-            <label className="text-sm font-semibold ml-1">Email Address</label>
-            <div className="relative">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="rohan@example.com"
-                className="w-full bg-secondary border-none rounded-2xl py-3.5 pl-12 pr-4 focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-              />
-            </div>
-          </div>
-
-          {/* Password */}
-          <div className="space-y-2">
-            <label className="text-sm font-semibold ml-1">Password</label>
-            <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
-              <input
-                type="password"
-                required
-                minLength={6}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Min. 6 characters"
-                className="w-full bg-secondary border-none rounded-2xl py-3.5 pl-12 pr-4 focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-              />
-            </div>
-          </div>
-
-          {/* Submit */}
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full py-4 bg-primary text-primary-foreground rounded-2xl font-bold flex items-center justify-center gap-2 hover:opacity-90 transition-opacity shadow-lg shadow-primary/20 mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isSubmitting ? <Loader2 className="animate-spin" size={20} /> : <UserPlus size={20} />}
-            {isSubmitting ? 'Creating Account…' : 'Create Free Account'}
+          <button className="btn btn-primary w-full" type="submit" disabled={loading} style={{ marginTop: 4, padding: '13px', fontSize: '0.95rem' }}>
+            {loading ? 'Creating account…' : 'Create account'}
           </button>
         </form>
 
-        {/* Login Link */}
-        <p className="text-center text-sm text-muted-foreground mt-8">
+        <p style={{ textAlign: 'center', marginTop: 24, color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
           Already have an account?{' '}
-          <Link to="/login" className="text-primary font-bold hover:underline">
-            Log In
-          </Link>
+          <Link to="/login" style={{ color: 'var(--accent-light)', fontWeight: 600 }}>Sign in</Link>
         </p>
-      </motion.div>
+      </div>
     </div>
-  );
+  )
 }
