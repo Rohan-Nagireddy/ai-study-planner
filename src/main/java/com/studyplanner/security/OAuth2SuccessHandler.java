@@ -41,17 +41,20 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
             Authentication      authentication
     ) throws IOException, ServletException {
 
+        // The principal is our User entity, which implements both OAuth2User and UserDetails
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         log.info("OAuth2 login successful for user: {}", userDetails.getUsername());
 
         // 1. Generate JWT
         String token = jwtUtil.generateToken(userDetails);
 
-        // 3. Redirect to Frontend
-        String targetUrl = UriComponentsBuilder.fromUriString(frontendUrl + "/oauth-success")
+        // 2. Build redirect URL — hardcoded for production reliability
+        String frontendRedirectUrl = "https://effervescent-madeleine-f7e9c1.netlify.app";
+        String targetUrl = UriComponentsBuilder.fromUriString(frontendRedirectUrl + "/oauth-success")
                 .queryParam("token", token)
                 .build().toUriString();
 
+        log.info("Redirecting OAuth2 user to: {}", targetUrl);
         getRedirectStrategy().sendRedirect(request, response, targetUrl);
     }
 }

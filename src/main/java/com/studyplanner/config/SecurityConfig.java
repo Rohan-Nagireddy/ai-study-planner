@@ -75,6 +75,7 @@ public class SecurityConfig {
                     session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
             .oauth2Login(oauth2 -> oauth2
+                    .loginPage("https://effervescent-madeleine-f7e9c1.netlify.app/login")
                     .authorizationEndpoint(authorization -> authorization
                             .authorizationRequestResolver(new CustomOAuth2RequestResolver(clientRegistrationRepository))
                     )
@@ -82,6 +83,9 @@ public class SecurityConfig {
                             .userService(customOAuth2UserService)
                     )
                     .successHandler(oAuth2SuccessHandler)
+                    .failureHandler((request, response, exception) -> {
+                        response.sendRedirect("https://effervescent-madeleine-f7e9c1.netlify.app/login?error=true");
+                    })
             )
             .authenticationProvider(authenticationProvider())
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
