@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // ── Base URL (set VITE_API_URL in .env.local or Vercel/Netlify dashboard) ────
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+const API_URL = import.meta.env.VITE_API_URL || 'https://ai-study-planner-9mkx.onrender.com/api';
 
 const client = axios.create({
   baseURL: API_URL,
