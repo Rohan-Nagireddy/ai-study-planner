@@ -49,6 +49,9 @@ public class SecurityConfig {
     @Value("${app.cors.allowed-origins}")
     private List<String> allowedOrigins;
 
+    @Value("${app.frontend.url}")
+    private String frontendUrl;
+
     /** Endpoints that do NOT require a JWT token. */
     private static final String[] PUBLIC_ENDPOINTS = {
             "/api/auth/register",
@@ -75,7 +78,7 @@ public class SecurityConfig {
                     session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
             .oauth2Login(oauth2 -> oauth2
-                    .loginPage("https://effervescent-madeleine-f7e9c1.netlify.app/login")
+                    .loginPage(frontendUrl + "/login")
                     .authorizationEndpoint(authorization -> authorization
                             .authorizationRequestResolver(new CustomOAuth2RequestResolver(clientRegistrationRepository))
                     )
@@ -84,7 +87,7 @@ public class SecurityConfig {
                     )
                     .successHandler(oAuth2SuccessHandler)
                     .failureHandler((request, response, exception) -> {
-                        response.sendRedirect("https://effervescent-madeleine-f7e9c1.netlify.app/login?error=true");
+                        response.sendRedirect(frontendUrl + "/login?error=true");
                     })
             )
             .authenticationProvider(authenticationProvider())

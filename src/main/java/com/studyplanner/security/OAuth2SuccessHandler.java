@@ -48,9 +48,8 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         // 1. Generate JWT
         String token = jwtUtil.generateToken(userDetails);
 
-        // 2. Build redirect URL — hardcoded for production reliability
-        String frontendRedirectUrl = "https://effervescent-madeleine-f7e9c1.netlify.app";
-        String targetUrl = UriComponentsBuilder.fromUriString(frontendRedirectUrl + "/oauth-success")
+        // 2. Build redirect URL — dynamically using app.frontend.url
+        String targetUrl = UriComponentsBuilder.fromUriString(frontendUrl + "/oauth-success")
                 .queryParam("token", token)
                 .build().toUriString();
 
