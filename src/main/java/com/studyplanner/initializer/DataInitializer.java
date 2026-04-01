@@ -28,8 +28,12 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        seedTasks();
-        seedAdminUser();
+        try {
+            seedTasks();
+            seedAdminUser();
+        } catch (Exception ex) {
+            log.warn("[DataInitializer] Skipping seed — MongoDB unavailable: {}", ex.getMessage());
+        }
     }
 
     private void seedTasks() {
