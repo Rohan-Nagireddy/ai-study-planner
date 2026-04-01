@@ -27,6 +27,8 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import org.springframework.beans.factory.annotation.Value;
+
 import java.util.List;
 
 /**
@@ -43,13 +45,16 @@ public class SecurityConfig {
     private final CustomOAuth2UserService     customOAuth2UserService;
     private final OAuth2SuccessHandler      oAuth2SuccessHandler;
     private final ClientRegistrationRepository clientRegistrationRepository;
+    
+    @Value("${app.cors.allowed-origins}")
+    private List<String> allowedOrigins;
 
     /** Endpoints that do NOT require a JWT token. */
     private static final String[] PUBLIC_ENDPOINTS = {
             "/api/auth/register",
-            "/api/auth/login",
-            "/login/oauth2/**",
+            "/login/**",
             "/oauth2/**",
+            "/error",
             "/v3/api-docs/**",
             "/swagger-ui/**",
             "/swagger-ui.html",
@@ -105,10 +110,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of(
-                "http://localhost:5173",
-                "https://effervescent-madeleine-f7e9c1.netlify.app"
-        ));
+        configuration.setAllowedOrigins(allowedOrigins);
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "X-Requested-With"));
         configuration.setAllowCredentials(true);

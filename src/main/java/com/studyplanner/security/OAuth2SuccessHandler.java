@@ -31,6 +31,9 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 
     private final JwtUtil        jwtUtil;
 
+    @org.springframework.beans.factory.annotation.Value("${app.frontend.url}")
+    private String frontendUrl;
+
     @Override
     public void onAuthenticationSuccess(
             HttpServletRequest  request,
@@ -45,7 +48,7 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         String token = jwtUtil.generateToken(userDetails);
 
         // 3. Redirect to Frontend
-        String targetUrl = UriComponentsBuilder.fromUriString("http://localhost:5173/oauth-success")
+        String targetUrl = UriComponentsBuilder.fromUriString(frontendUrl + "/oauth-success")
                 .queryParam("token", token)
                 .build().toUriString();
 

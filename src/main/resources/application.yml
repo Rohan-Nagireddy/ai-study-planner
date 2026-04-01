@@ -7,36 +7,20 @@ spring:
       uri: ${MONGODB_URI}
       auto-index-creation: false
 
-  # OAuth2 Login (Google & GitHub)
-  security:
-    oauth2:
-      client:
-        registration:
-          google:
-            client-id: ${GOOGLE_CLIENT_ID}
-            client-secret: ${GOOGLE_CLIENT_SECRET}
-            scope:
-              - email
-              - profile
-          github:
-            client-id: ${GITHUB_CLIENT_ID}
-            client-secret: ${GITHUB_CLIENT_SECRET}
-            redirect-uri: "{baseUrl}/login/oauth2/code/github"
-            scope:
-              - read:user
-              - user:email
+  # OAuth2 Login configuration has been moved to application.properties
     user:
       password: "disabled"
 
 # Render injects PORT automatically; fallback to 8080 for local dev
 server:
   port: ${PORT:8080}
+  forward-headers-strategy: framework
 
 # Application Configuration
 app:
   # JWT
   jwt:
-    secret: ${JWT_SECRET:dGhpc2lzYXZlcnlzZWN1cmVpbnRlcm5hbGp3dHNlY3JldGtleTIwMjYwMzIw}
+    secret: ${JWT_SECRET}
     expiration-ms: 86400000        # 24 hours
     refresh-expiration-ms: 604800000  # 7 days
 
@@ -53,8 +37,8 @@ app:
 logging:
   level:
     com.studyplanner: INFO
-    org.springframework.security: WARN
-    org.springframework.security.oauth2: WARN
+    org.springframework.security: DEBUG
+    org.springframework.web: DEBUG
     org.springframework.data.mongodb: WARN
     org.mongodb.driver.connection: WARN
     org.mongodb.driver.cluster: WARN
