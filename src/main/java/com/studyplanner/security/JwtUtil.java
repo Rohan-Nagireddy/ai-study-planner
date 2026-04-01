@@ -41,19 +41,19 @@ import java.util.function.Function;
 @Component
 public class JwtUtil {
 
-    @Value("${app.jwt.secret}")
-    private String secretKey;
+    @Value("${JWT_SECRET:dGhpc2lzYXZlcnlzZWN1cmVpbnRlcm5hbGp3dHNlY3JldGtleTIwMjYwMzIw}")
+    private String jwtSecret;
 
     @Value("${app.jwt.expiration-ms}")
     private long jwtExpirationMs;
 
     @jakarta.annotation.PostConstruct
     public void init() {
-        if (secretKey == null || secretKey.isEmpty()) {
-            log.error("JWT Secret Key is NULL or EMPTY! Please check application.yml");
+        if (jwtSecret == null || jwtSecret.isEmpty()) {
+            log.error("JWT Secret Key is NULL or EMPTY! Please check environment variables.");
         } else {
             log.info("JWT Secret Key loaded. Length: {}. Starts with: {}", 
-                    secretKey.length(), secretKey.substring(0, Math.min(secretKey.length(), 4)));
+                    jwtSecret.length(), jwtSecret.substring(0, Math.min(jwtSecret.length(), 4)));
         }
     }
 
@@ -178,7 +178,7 @@ public class JwtUtil {
      * The key must be at least 256 bits (32 bytes) to satisfy JJWT requirements.
      */
     private SecretKey getSigningKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(secretKey);
+        byte[] keyBytes = Decoders.BASE64.decode(jwtSecret);
         return Keys.hmacShaKeyFor(keyBytes);
     }
 }
